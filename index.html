@@ -290,7 +290,14 @@ async function carregarEquipe() {
   // limpa tabela (evita duplicação)
   tabela.querySelectorAll("tr:not(:first-child)").forEach(tr => tr.remove());
 
-  data?.forEach(p => {
+  // 🔥 ORDENAÇÃO: mortos primeiro
+  const ordenado = (data || []).sort((a, b) => {
+    if (a.situacao === b.situacao) return 0;
+    if (a.situacao === "Morto") return -1;
+    return 1;
+  });
+
+  ordenado.forEach(p => {
     tabela.appendChild(criarLinha(p));
   });
 
