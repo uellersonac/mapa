@@ -9,7 +9,7 @@
   <style>
     body { font-family: Arial; }
 
-    #btnAdicionar{
+    #btnAdicionar, #btnDeletar {
       font-size: 24px;
     }
 
@@ -86,6 +86,11 @@
       color: rgb(171, 171, 171);
       font-weight: bold;
       cursor: pointer;
+      display: none;
+    }
+
+    body.delete-mode .delete-btn {
+      display: table-cell;
     }
 
     input {
@@ -148,16 +153,15 @@
 
     <table id="tabela">
       <tr>
-        <th>Combatente</th>
+                <th>Combatente</th>
         <th>Situação</th>
-        <th>Posição</th>
-        <th></th>
       </tr>
     </table>
 
     <div style="margin-top: 15px; display: flex; gap: 10px;">
       <input type="text" id="novoNome" placeholder="Nome do combatente" />
-      <button id="btnAdicionar">Adicionar</button>
+      <button id="btnAdicionar">+</button>
+      <button id="btnDeletar">Deletar</button>
     </div>
 
   </div>
@@ -171,26 +175,22 @@ const supabaseClient = supabase.createClient(
   "sb_publishable_STLfngAI0fmNyl_RD83cMQ_MbdpaOAG"
 );
 
-// ===== LOGIN POR CHAVE =====
+// ===== LOGIN =====
 async function login() {
   const chave = document.getElementById("chave").value.trim();
 
-  const { data, error } = await supabaseClient
+  const { data } = await supabaseClient
     .from("acessos")
     .select("*")
     .eq("chave", chave)
     .single();
 
-  if (error || !data) {
-    alert("Chave inválida");
-    return;
-  }
+  if (!data) return alert("Chave inválida");
 
   localStorage.setItem("acesso", chave);
   iniciarApp();
 }
 
-// 🔥 VALIDAÇÃO REAL AO CARREGAR
 window.onload = async () => {
   const acesso = localStorage.getItem("acesso");
 
@@ -204,21 +204,30 @@ window.onload = async () => {
 
   if (!data) {
     localStorage.removeItem("acesso");
-    alert("Acesso expirado");
-    return;
+    return alert("Acesso expirado");
   }
 
   iniciarApp();
 };
 
-// iniciar app
 function iniciarApp() {
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("app").style.display = "flex";
 
   carregarPontos();
   carregarEquipe();
+
+  // 🔥 AUTO UPDATE (2s)
+  setInterval(() => {
+    carregarPontos();
+    carregarEquipe();
+  }, 2000);
 }
+
+// ===== DELETE MODE =====
+document.getElementById("btnDeletar").onclick = () => {
+  document.body.classList.toggle("delete-mode");
+};
 
 // ===== ABAS =====
 document.querySelectorAll(".tab").forEach(tab => {
@@ -245,10 +254,7 @@ document.querySelectorAll(".ponto").forEach((circulo) => {
 
     await supabaseClient
       .from("pontos_mapa")
-      .upsert({
-        nome: circulo.dataset.nome,
-        cor: cor
-      });
+      .upsert({ nome: circulo.dataset.nome, cor });
   });
 });
 
@@ -263,16 +269,14 @@ async function carregarPontos() {
 
 // ===== EQUIPE =====
 const situacoes = ["Vivo", "Morto"];
-const posicoes = ["MPE", "MGE", "Municípios", "AGRO"];
 
 function criarLinha(p) {
   const tr = document.createElement("tr");
 
   tr.innerHTML = `
+    <td class="delete-btn">✖</td>
     <td>${p.nome}</td>
     <td class="situacao ${p.situacao.toLowerCase()}">${p.situacao}</td>
-    <td class="posicao">${p.posicao}</td>
-    <td class="delete-btn">✖</td>
   `;
 
   return tr;
@@ -283,9 +287,11 @@ async function carregarEquipe() {
 
   const tabela = document.getElementById("tabela");
 
+  // limpa tabela (evita duplicação)
+  tabela.querySelectorAll("tr:not(:first-child)").forEach(tr => tr.remove());
+
   data?.forEach(p => {
-    const tr = criarLinha(p);
-    tabela.appendChild(tr);
+    tabela.appendChild(criarLinha(p));
   });
 
   ativarEventosTabela();
@@ -304,7 +310,7 @@ function ativarEventosTabela() {
       el.classList.remove("vivo", "morto");
       el.classList.add(valor.toLowerCase());
 
-      const nome = el.parentElement.children[0].textContent;
+      const nome = el.parentElement.children[1].textContent;
 
       await supabaseClient
         .from("equipe")
@@ -313,30 +319,11 @@ function ativarEventosTabela() {
     };
   });
 
-  document.querySelectorAll(".posicao").forEach(el => {
-    let index = posicoes.indexOf(el.textContent);
-
-    el.onclick = async () => {
-      index = (index + 1) % posicoes.length;
-      const valor = posicoes[index];
-
-      el.textContent = valor;
-
-      const nome = el.parentElement.children[0].textContent;
-
-      await supabaseClient
-        .from("equipe")
-        .update({ posicao: valor })
-        .eq("nome", nome);
-    };
-  });
-
   document.querySelectorAll(".delete-btn").forEach(el => {
     el.onclick = async () => {
-      const nome = el.parentElement.children[0].textContent;
+      const nome = el.parentElement.children[1].textContent;
 
-      const confirmar = confirm(`Deseja excluir ${nome}?`);
-      if (!confirmar) return;
+      if (!confirm(`Deseja excluir ${nome}?`)) return;
 
       await supabaseClient
         .from("equipe")
@@ -350,37 +337,16 @@ function ativarEventosTabela() {
 
 // ===== ADICIONAR =====
 document.getElementById("btnAdicionar").onclick = async () => {
-  const input = document.getElementById("novoNome");
-  const nome = input.value.trim();
+  const nome = document.getElementById("novoNome").value.trim();
 
   if (!nome) return alert("Digite um nome");
 
-  const novo = {
-    nome: nome,
-    situacao: "Vivo",
-    posicao: "MPE"
-  };
-
-  const { data } = await supabaseClient
+  await supabaseClient
     .from("equipe")
-    .insert([novo])
-    .select();
+    .insert([{ nome, situacao: "Vivo" }]);
 
-  const tabela = document.getElementById("tabela");
-  const tr = criarLinha(data[0]);
-  tabela.appendChild(tr);
-
-  ativarEventosTabela();
-
-  input.value = "";
+  document.getElementById("novoNome").value = "";
 };
-
-// ENTER adiciona
-document.getElementById("novoNome").addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    document.getElementById("btnAdicionar").click();
-  }
-});
 </script>
 
 </body>
