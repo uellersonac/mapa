@@ -7,37 +7,26 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
   <style>
-    body { 
-      font-family: Arial; 
-      margin: 0;
-      padding: 10px;
-    }
+    body { font-family: Arial; }
 
     .container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      width: 100%;
-      max-width: 900px;
-      margin: auto;
     }
 
     .tabs {
       display: flex;
       gap: 10px;
       margin-bottom: 20px;
-      width: 100%;
     }
 
     .tab {
-      flex: 1;
-      padding: 15px;
+      padding: 10px 20px;
       border: 1px solid #ccc;
       cursor: pointer;
-      border-radius: 10px;
+      border-radius: 8px;
       background: #eee;
-      text-align: center;
-      font-size: 16px;
     }
 
     .tab.active {
@@ -45,17 +34,11 @@
       font-weight: bold;
     }
 
-    .content { display: none; width: 100%; }
+    .content { display: none; }
     .content.active { display: block; }
-
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-    }
 
     table {
       border-collapse: collapse;
-      width: 100%;
       min-width: 500px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       border-radius: 10px;
@@ -93,16 +76,15 @@
     }
 
     input {
-      padding: 10px;
-      border-radius: 8px;
+      padding: 8px;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      flex: 1;
     }
 
     button {
-      padding: 10px 15px;
+      padding: 8px 15px;
       border: none;
-      border-radius: 8px;
+      border-radius: 6px;
       background: #ffd11a;
       cursor: pointer;
       font-weight: bold;
@@ -111,44 +93,6 @@
     #loginBox {
       text-align: center;
       margin-top: 100px;
-    }
-
-    .mapa-container {
-      position: relative;
-      width: 100%;
-      max-width: 600px;
-    }
-
-    .mapa-container img {
-      width: 100%;
-    }
-
-    svg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-    @media (max-width: 600px) {
-      .tab {
-        font-size: 14px;
-        padding: 12px;
-      }
-
-      th, td {
-        padding: 10px;
-        font-size: 14px;
-      }
-
-      button {
-        width: 100%;
-      }
-
-      .input-group {
-        flex-direction: column;
-      }
     }
   </style>
 </head>
@@ -174,10 +118,10 @@
 
   <!-- MAPA -->
   <div id="mapa" class="content active">
-    <div class="mapa-container">
-      <img src="mapa.png" />
+    <div style="position: relative; width: 600px;">
+      <img src="mapa.png" style="width: 100%;" />
 
-      <svg>
+      <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
         <circle cx="31.67%" cy="37.10%" r="5%" fill="blue" fill-opacity="0.5" class="ponto" data-nome="Municipios"/>
         <circle cx="44.00%" cy="60.16%" r="5%" fill="blue" fill-opacity="0.5" class="ponto" data-nome="Agro"/>
         <circle cx="75.67%" cy="43.83%" r="5%" fill="blue" fill-opacity="0.5" class="ponto" data-nome="MPE"/>
@@ -189,18 +133,16 @@
   <!-- EQUIPE -->
   <div id="equipe" class="content">
 
-    <div class="table-container">
-      <table id="tabela">
-        <tr>
-          <th>Combatente</th>
-          <th>Situação</th>
-          <th>Posição</th>
-          <th></th>
-        </tr>
-      </table>
-    </div>
+    <table id="tabela">
+      <tr>
+        <th>Combatente</th>
+        <th>Situação</th>
+        <th>Posição</th>
+        <th></th>
+      </tr>
+    </table>
 
-    <div class="input-group" style="margin-top: 15px; display: flex; gap: 10px; width:100%;">
+    <div style="margin-top: 15px; display: flex; gap: 10px;">
       <input type="text" id="novoNome" placeholder="Nome do combatente" />
       <button id="btnAdicionar">Adicionar</button>
     </div>
@@ -210,12 +152,13 @@
 </div>
 
 <script>
+// ===== SUPABASE =====
 const supabaseClient = supabase.createClient(
   "https://qdxemksigqvwbrczscev.supabase.co",
   "sb_publishable_STLfngAI0fmNyl_RD83cMQ_MbdpaOAG"
 );
 
-// LOGIN
+// ===== LOGIN POR CHAVE =====
 async function login() {
   const chave = document.getElementById("chave").value.trim();
 
@@ -234,7 +177,7 @@ async function login() {
   iniciarApp();
 }
 
-// validação ao abrir
+// 🔥 VALIDAÇÃO REAL AO CARREGAR
 window.onload = async () => {
   const acesso = localStorage.getItem("acesso");
 
@@ -255,6 +198,7 @@ window.onload = async () => {
   iniciarApp();
 };
 
+// iniciar app
 function iniciarApp() {
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("app").style.display = "flex";
@@ -263,7 +207,7 @@ function iniciarApp() {
   carregarEquipe();
 }
 
-// ABAS
+// ===== ABAS =====
 document.querySelectorAll(".tab").forEach(tab => {
   tab.onclick = () => {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -274,23 +218,25 @@ document.querySelectorAll(".tab").forEach(tab => {
   };
 });
 
-// MAPA
+// ===== MAPA =====
 const cores = ["blue", "yellow", "red"];
 
 document.querySelectorAll(".ponto").forEach((circulo) => {
   let index = 0;
 
-  circulo.onclick = async () => {
+  circulo.addEventListener("click", async () => {
     index = (index + 1) % cores.length;
     const cor = cores[index];
 
     circulo.setAttribute("fill", cor);
 
-    await supabaseClient.from("pontos_mapa").upsert({
-      nome: circulo.dataset.nome,
-      cor
-    });
-  };
+    await supabaseClient
+      .from("pontos_mapa")
+      .upsert({
+        nome: circulo.dataset.nome,
+        cor: cor
+      });
+  });
 });
 
 async function carregarPontos() {
@@ -302,7 +248,7 @@ async function carregarPontos() {
   });
 }
 
-// EQUIPE
+// ===== EQUIPE =====
 const situacoes = ["Vivo", "Morto"];
 const posicoes = ["MPE", "MGE", "Municípios", "AGRO"];
 
@@ -321,6 +267,7 @@ function criarLinha(p) {
 
 async function carregarEquipe() {
   const { data } = await supabaseClient.from("equipe").select("*");
+
   const tabela = document.getElementById("tabela");
 
   data?.forEach(p => {
@@ -346,7 +293,8 @@ function ativarEventosTabela() {
 
       const nome = el.parentElement.children[0].textContent;
 
-      await supabaseClient.from("equipe")
+      await supabaseClient
+        .from("equipe")
         .update({ situacao: valor })
         .eq("nome", nome);
     };
@@ -363,7 +311,8 @@ function ativarEventosTabela() {
 
       const nome = el.parentElement.children[0].textContent;
 
-      await supabaseClient.from("equipe")
+      await supabaseClient
+        .from("equipe")
         .update({ posicao: valor })
         .eq("nome", nome);
     };
@@ -373,9 +322,11 @@ function ativarEventosTabela() {
     el.onclick = async () => {
       const nome = el.parentElement.children[0].textContent;
 
-      if (!confirm(`Deseja excluir ${nome}?`)) return;
+      const confirmar = confirm(`Deseja excluir ${nome}?`);
+      if (!confirmar) return;
 
-      await supabaseClient.from("equipe")
+      await supabaseClient
+        .from("equipe")
         .delete()
         .eq("nome", nome);
 
@@ -384,25 +335,34 @@ function ativarEventosTabela() {
   });
 }
 
-// ADD
+// ===== ADICIONAR =====
 document.getElementById("btnAdicionar").onclick = async () => {
   const input = document.getElementById("novoNome");
   const nome = input.value.trim();
 
   if (!nome) return alert("Digite um nome");
 
+  const novo = {
+    nome: nome,
+    situacao: "Vivo",
+    posicao: "MPE"
+  };
+
   const { data } = await supabaseClient
     .from("equipe")
-    .insert([{ nome, situacao: "Vivo", posicao: "MPE" }])
+    .insert([novo])
     .select();
 
-  document.getElementById("tabela").appendChild(criarLinha(data[0]));
+  const tabela = document.getElementById("tabela");
+  const tr = criarLinha(data[0]);
+  tabela.appendChild(tr);
+
   ativarEventosTabela();
 
   input.value = "";
 };
 
-// ENTER
+// ENTER adiciona
 document.getElementById("novoNome").addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
     document.getElementById("btnAdicionar").click();
